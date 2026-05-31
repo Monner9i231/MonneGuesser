@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MonneGuessr</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/mapillary-js@4.1.2/dist/mapillary.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mapillary-js@4.1.2/dist/mapillary.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="setup-logo">Monne<span>Guessr</span></div>
+    <p class="setup-sub">Indtast din Mapillary API-nøgle for at spille</p>
+    <input id="api-key-input" type="text" placeholder="Din Mapillary Client Access Token" autocomplete="off" />
+    <div class="setup-modes">
+      <label>Spillere</label>
+      <div class="mode-btns" id="player-mode">
+        <button class="mode-btn active" data-val="solo">Solo</button>
+        <button class="mode-btn" data-val="1v1">1v1</button>
+        <button class="mode-btn" data-val="2v2">2v2</button>
+      </div>
+      <label>Mode</label>
+      <div class="mode-btns" id="game-mode">
+        <button class="mode-btn active" data-val="normal">Normal</button>
+        <button class="mode-btn" data-val="nomove">No Move</button>
+        <button class="mode-btn" data-val="nmpz">NMPZ</button>
+      </div>
+      <label>Kort</label>
+      <div class="mode-btns" id="map-mode">
+        <button class="mode-btn active" data-val="world">Verden</button>
+        <button class="mode-btn" data-val="europe">Europa</button>
+        <button class="mode-btn" data-val="denmark">Danmark</button>
+      </div>
+      <label>Timer (sekunder)</label>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <input type="range" id="timer-range" min="30" max="300" step="10" value="120" style="flex:1;" />
+        <span id="timer-display" style="min-width:36px;font-weight:500;">120s</span>
+      </div>
+    </div>
+    <button id="start-btn">Start spil</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="hidden">
+
+  <!-- Street View -->
+  <div id="mly-container"></div>
+
+  <!-- HUD top -->
+  <div class="hud-top">
+    <div class="player-hud" id="p1-hud">
+      <img id="p1-flag" src="https://flagcdn.com/w40/dk.png" alt="flag" class="flag" />
+      <div class="health-wrap">
+        <span class="player-label" id="p1-name">Monne</span>
+        <div class="health-bar"><div class="health-fill" id="p1-health" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div class="round-badge">Runde <span id="cur-round">1</span>/<span id="tot-round">5</span></div>
+    <div class="player-hud reverse" id="p2-hud">
+      <div class="health-wrap">
+        <span class="player-label" id="p2-name">Aleksander</span>
+        <div class="health-bar"><div class="health-fill" id="p2-health" style="width:100%"></div></div>
+      </div>
+      <img id="p2-flag" src="https://flagcdn.com/w40/es.png" alt="flag" class="flag" />
+    </div>
+  </div>
+
+  <!-- Timer bar -->
+  <div class="timer-bar-wrap">
+    <div class="timer-bar-fill" id="timer-bar"></div>
+    <span class="timer-text" id="timer-text">120</span>
+  </div>
+
+  <!-- Bottom left controls -->
+  <div class="bottom-left">
+    <button class="ctrl-btn" id="settings-btn" title="Indstillinger"><i class="ti ti-settings"></i></button>
+    <button class="ctrl-btn" id="respawn-btn" title="Tilbage til start"><i class="ti ti-arrow-back-up"></i></button>
+  </div>
+
+  <!-- Map -->
+  <div id="map-container" class="map-small">
+    <div id="leaflet-map"></div>
+    <button id="guess-btn" disabled>Gæt</button>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel" class="hidden">
+    <div class="settings-inner">
+      <div class="settings-title">Indstillinger</div>
+      <div class="setting-row">
+        <span>Lydeffekter</span>
+        <label class="toggle"><input type="checkbox" id="sfx-toggle" checked /><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <span>UI størrelse</span>
+        <div class="mode-btns">
+          <button class="mode-btn" data-size="small" onclick="setUISize('small')">Lille</button>
+          <button class="mode-btn active" data-size="normal" onclick="setUISize('normal')">Normal</button>
+          <button class="mode-btn" data-size="large" onclick="setUISize('large')">Stor</button>
+        </div>
+      </div>
+      <button class="close-btn" id="close-settings">Luk</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- RESULT SCREEN (per round) -->
+<div id="result-screen" class="hidden">
+  <div class="result-box">
+    <div class="result-title">Runderesultat</div>
+    <div id="result-map"></div>
+    <div class="result-scores" id="result-scores"></div>
+    <button id="next-round-btn">Næste runde →</button>
+  </div>
+</div>
+
+<!-- FINAL SCREEN -->
+<div id="final-screen" class="hidden">
+  <div class="final-box">
+    <div class="setup-logo">Monne<span>Guessr</span></div>
+    <div class="final-title">Spil slut!</div>
+    <div id="final-scores"></div>
+    <button id="play-again-btn">Spil igen</button>
+  </div>
+</div>
+
+<!-- Audio -->
+<audio id="sfx-guess" src="https://cdn.jsdelivr.net/gh/anars/blank-audio@master/250-milliseconds-of-silence.mp3" preload="auto"></audio>
+
+<script src="js/locations.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
